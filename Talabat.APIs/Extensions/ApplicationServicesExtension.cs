@@ -3,16 +3,19 @@ using Talabat.APIs.Errors;
 using Talabat.APIs.Helpers;
 using Talabat.Core.Repositories;
 using Talabat.Repository;
+//using AutoMapper;
 
 namespace Talabat.APIs.Extensions
 {
+
     public static class ApplicationServicesExtension
     {
-        public static IServiceCollection AddAplicationServices( this IServiceCollection Services )
+        public static IServiceCollection AddAplicationServices(this IServiceCollection Services)
         {
             Services.AddScoped(typeof(IBasketRepository), typeof(BasketRepository));
             Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             Services.AddAutoMapper(typeof(MappingProfiles));
+          
             Services.Configure<ApiBehaviorOptions>(Options =>
             {
                 Options.InvalidModelStateResponseFactory = (actionContext) =>
@@ -31,4 +34,5 @@ namespace Talabat.APIs.Extensions
             return Services;
         }
     }
+
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
@@ -7,9 +8,11 @@ using Talabat.APIs.Extensions;
 using Talabat.APIs.Helpers;
 using Talabat.APIs.Middlewares;
 using Talabat.Core.Entites;
+using Talabat.Core.Entites.Identity;
 using Talabat.Core.Repositories;
 using Talabat.Repository;
 using Talabat.Repository.Data;
+using Talabat.Repository.Identity;
 
 public class Program {
     public static async Task Main(string[] args) {
@@ -25,15 +28,19 @@ public class Program {
         {
             Options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
         });
+
+        builder.Services.AddDbContext<AppIdentityDbContext>(Options =>
+        {
+            Options.UseSqlServer(builder.Configuration.GetConnectionString("IdentityConnection"));   
+        });
         builder.Services.AddSingleton<IConnectionMultiplexer>(Options =>
         {
             var Connection = builder.Configuration.GetConnectionString("RedisConnection");
             return ConnectionMultiplexer.Connect(Connection);
         });
         builder.Services.AddAplicationServices();
- 
-
-
+       
+        builder.Services.AddIdentityServices(builder.Configuration);
         #endregion
 
         var app = builder.Build();
@@ -45,9 +52,15 @@ public class Program {
         try
         {
 
-            var dbContext = Services.GetRequiredService<StoreContext>();
-            await dbContext.Database.MigrateAsync();
-            await StoreContextSeed.SeedAsync(dbContext);
+            var DbContext = Services.GetRequiredService<StoreContext>();
+            await DbContext.Database.MigrateAsync();
+
+            var IdentityDbContext = Services.GetRequiredService<AppIdentityDbContext>();
+
+            await IdentityDbContext.Database.MigrateAsync();
+            var UserManager = Services.GetRequiredService<UserManager<AppUser>>();
+            await AppIdentityDbContextSeed.SeedUserAsync(UserManager);
+            await StoreContextSeed.SeedAsync(DbContext);
         }
         catch (Exception ex)
         {
@@ -57,7 +70,7 @@ public class Program {
         }
         #endregion
 
-        // Configure the HTTP request pipeline.
+        #region Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
             app.UseMiddleware<ExceptionMiddleWare>();
@@ -65,14 +78,18 @@ public class Program {
             app.UseSwaggerUI();
         }
 
+        app.UseStatusCodePagesWithReExecute("/errors/{0}");
+        
         app.UseHttpsRedirection();
-
-        app.UseAuthorization();
 
         app.UseStaticFiles();
 
+        app.UseAuthentication();
+
+        app.UseAuthorization();
+
         app.MapControllers();
-        
+        #endregion
 
         app.Run();
 
