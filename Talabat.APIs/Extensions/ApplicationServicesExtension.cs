@@ -3,7 +3,9 @@ using Talabat.APIs.Errors;
 using Talabat.APIs.Helpers;
 using Talabat.Core;
 using Talabat.Core.Repositories;
+using Talabat.Core.Services;
 using Talabat.Repository;
+using Talabat.Service;
 //using AutoMapper;
 
 namespace Talabat.APIs.Extensions
@@ -17,6 +19,7 @@ namespace Talabat.APIs.Extensions
             Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             Services.AddAutoMapper(typeof(MappingProfiles));
             Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            Services.AddScoped<IOrderService, OrderService>();
             Services.Configure<ApiBehaviorOptions>(Options =>
             {
                 Options.InvalidModelStateResponseFactory = (actionContext) =>
