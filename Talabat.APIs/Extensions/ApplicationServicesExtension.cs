@@ -20,6 +20,7 @@ namespace Talabat.APIs.Extensions
             Services.AddAutoMapper(typeof(MappingProfiles));
             Services.AddScoped<IUnitOfWork, UnitOfWork>();
             Services.AddScoped<IOrderService, OrderService>();
+            Services.AddScoped<IPaymentService, PaymentService>();
             Services.Configure<ApiBehaviorOptions>(Options =>
             {
                 Options.InvalidModelStateResponseFactory = (actionContext) =>
@@ -35,6 +36,7 @@ namespace Talabat.APIs.Extensions
                     return new BadRequestObjectResult(ValidateErrorResponse);
                 };
             });
+            
             return Services;
         }
     }

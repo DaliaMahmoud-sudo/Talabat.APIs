@@ -16,12 +16,15 @@ namespace Talabat.Service
     {
         private readonly IBasketRepository _basketRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IPaymentService _paymentService;
 
         public OrderService(IBasketRepository basketRepository, 
-              IUnitOfWork unitOfWork  )
+              IUnitOfWork unitOfWork,
+              IPaymentService paymentService)
         {
             _basketRepository = basketRepository;
             _unitOfWork=unitOfWork;
+            _paymentService = paymentService;
         }
         public async Task<Order?> CreateOrderAsync(string BuyerEmail, string BasketId, int DeliveryMethodId, Address ShippingAddress)
         {
@@ -48,7 +51,15 @@ namespace Talabat.Service
             var DeliveryMethod= await _unitOfWork.Repository<DeliveryMethod>().GetByIdAsync(DeliveryMethodId);
 
             //create order
-            var Order = new Order(BuyerEmail, ShippingAddress, DeliveryMethod, OrderItems,SubTotal);
+            var Spec = new OrderWithPaymentIntentIdSpec(Basket.PaymentIntentId);
+            var ExOrder= await _unitOfWork.Repository<Order>().GetEntityWithSpecAsync(Spec);
+            if (ExOrder is not null)
+            { 
+                _unitOfWork.Repository<Order>().Delete(ExOrder);
+                await _paymentService.CreateOrUpdatePaymentIntent(BasketId);
+
+            }
+            var Order = new Order(BuyerEmail, ShippingAddress, DeliveryMethod, OrderItems,SubTotal, Basket.PaymentIntentId);
 
             //add order locally
             _unitOfWork.Repository<Order>().AddAsync(Order);
@@ -64,7 +75,7 @@ namespace Talabat.Service
         public async Task<Order?> GetOrderByIdForSpecificUserAsync(string BuyerEmail, int OrderId)
         {
             var Spec= new OrderSpec(BuyerEmail,OrderId);
-            var Order = await _unitOfWork.Repository<Order>().GetByIdWithSpecAsync(Spec);
+            var Order = await _unitOfWork.Repository<Order>().GetEntityWithSpecAsync(Spec);
             return Order;
         }
 
